@@ -177,14 +177,11 @@ vec3f barycentric(const vec3f &p, const vec3f &a, const vec3f &b, const vec3f &c
   return vec3f(u, v, w);
 }
 
-vec3f interpolate(const vec3f &p, const vec3f &a, const vec3f &b, const vec3f &c, const vec3f attrs[3])
-{
-  vec3f bary = barycentric(p, a, b, c);
-  vec3f out = vec3f(0, 0, 0);
-  out = out + attrs[0] * bary.x;
-  out = out + attrs[1] * bary.y;
-  out = out + attrs[2] * bary.z;
-  return out;
+vector2 interpolate_uv(const vector2 &uv1, const vector2 &uv2, const vector2 &uv3, const vec3f &bary) {
+    vector2 uv;
+    uv.x = bary.x * uv1.x + bary.y * uv2.x + bary.z * uv3.x;
+    uv.y = bary.x * uv1.y + bary.y * uv2.y + bary.z * uv3.y;
+    return uv;
 }
 
 double min(double v1, double v2)
@@ -285,7 +282,6 @@ namespace Simplify
     double err[4];
     int deleted, dirty, attr;
     vec3f n;
-    vec3f uvs[3];
     int material;
   };
   struct Vertex
@@ -310,7 +306,6 @@ namespace Simplify
   double vertex_error(SymetricMatrix q, double x, double y, double z);
   double calculate_error(int id_v1, int id_v2, vec3f &p_result);
   bool flipped(vec3f p, int i0, int i1, Vertex &v0, Vertex &v1, std::vector<int> &deleted);
-  void update_uvs(int i0, const Vertex &v, const vec3f &p, std::vector<int> &deleted);
   void update_triangles(int i0, Vertex &v, std::vector<int> &deleted, int &deleted_triangles);
   void update_mesh(int iteration);
   void compact_mesh();
@@ -404,12 +399,6 @@ namespace Simplify
           if (flipped(p, i1, i0, v1, v0, deleted1))
             continue;
 
-          if ((t.attr & TEXCOORD) == TEXCOORD)
-          {
-            update_uvs(i0, v0, p, deleted0);
-            update_uvs(i0, v1, p, deleted1);
-          }
-
           // not flipped, so remove edge
           v0.p = p;
           v0.q = v1.q + v0.q;
@@ -483,24 +472,6 @@ namespace Simplify
         return true;
     }
     return false;
-  }
-
-  // update_uvs
-  void update_uvs(int i0, const Vertex &v, const vec3f &p, std::vector<int> &deleted)
-  {
-    loopk(0, v.tcount)
-    {
-      Ref &r = refs[v.tstart + k];
-      Triangle &t = triangles[r.tid];
-      if (t.deleted)
-        continue;
-      if (deleted[k])
-        continue;
-      vec3f p1 = vertices[t.v[0]].p;
-      vec3f p2 = vertices[t.v[1]].p;
-      vec3f p3 = vertices[t.v[2]].p;
-      t.uvs[r.tvertex] = interpolate(p, p1, p2, p3, t.uvs);
-    }
   }
 
   // Update triangle connections and edge error after a edge is collapsed
