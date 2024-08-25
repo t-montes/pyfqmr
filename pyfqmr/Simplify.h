@@ -197,7 +197,6 @@ class SymetricMatrix
 
 public:
   // Constructor
-
   SymetricMatrix(double c = 0) { loopi(0, 10) m[i] = c; }
 
   SymetricMatrix(double m11, double m12, double m13, double m14,
@@ -218,7 +217,6 @@ public:
   }
 
   // Make plane
-
   SymetricMatrix(double a, double b, double c, double d)
   {
     m[0] = a * a;
@@ -236,7 +234,6 @@ public:
   double operator[](int c) const { return m[c]; }
 
   // Determinant
-
   double det(int a11, int a12, int a13,
              int a21, int a22, int a23,
              int a31, int a32, int a33)
@@ -310,7 +307,6 @@ namespace Simplify
   std::vector<std::string> materials; //
 
   // Helper functions
-
   double vertex_error(SymetricMatrix q, double x, double y, double z);
   double calculate_error(int id_v1, int id_v2, vec3f &p_result);
   bool flipped(vec3f p, int i0, int i1, Vertex &v0, Vertex &v1, std::vector<int> &deleted);
@@ -318,6 +314,7 @@ namespace Simplify
   void update_triangles(int i0, Vertex &v, std::vector<int> &deleted, int &deleted_triangles);
   void update_mesh(int iteration);
   void compact_mesh();
+
   //
   // Main simplification function
   //
@@ -326,17 +323,13 @@ namespace Simplify
   //                 5..8 are good numbers
   //                 more iterations yield higher quality
   //
-
   void simplify_mesh(int target_count, int update_rate = 5, double agressiveness = 7,
                      bool verbose = false, int max_iterations = 100, double alpha = 0.000000001,
                      int K = 3, bool lossless = false, double threshold_lossless = 0.0001,
                      bool preserve_border = false)
   {
     // init
-    loopi(0, triangles.size())
-    {
-      triangles[i].deleted = 0;
-    }
+    loopi(0, triangles.size()) triangles[i].deleted = 0;
 
     // main iteration loop
     int deleted_triangles = 0;
@@ -458,115 +451,9 @@ namespace Simplify
     compact_mesh();
   } // simplify_mesh()
 
-  void simplify_mesh_lossless(bool verbose = false, double epsilon = 1e-3, int max_iterations = 9999)
-  {
-    // init
-    loopi(0, triangles.size())
-    {
-      triangles[i].deleted = 0;
-    }
-    // main iteration loop
-    int deleted_triangles = 0;
-    std::vector<int> deleted0, deleted1;
-    int triangle_count = triangles.size();
-    // int iteration = 0;
-    // loop(iteration,0,100)
-    for (int iteration = 0; iteration < max_iterations; iteration++)
-    {
-      // update mesh constantly
-      update_mesh(iteration);
-      // clear dirty flag
-      loopi(0, triangles.size()) triangles[i].dirty = 0;
-      //
-      // All triangles with edges below the threshold will be removed
-      //
-      // The following numbers works well for most models.
-      // If it does not, try to adjust the 3 parameters
-      //
-      double threshold = epsilon; // 1.0E-3 EPS;
-      if (verbose)
-      {
-        printf("lossless iteration %d\n", iteration);
-      }
-
-      // remove vertices & mark deleted triangles
-      loopi(0, triangles.size())
-      {
-        Triangle &t = triangles[i];
-        if (t.err[3] > threshold)
-          continue;
-        if (t.deleted)
-          continue;
-        if (t.dirty)
-          continue;
-
-        loopj(0, 3) if (t.err[j] < threshold)
-        {
-          int i0 = t.v[j];
-          Vertex &v0 = vertices[i0];
-          int i1 = t.v[(j + 1) % 3];
-          Vertex &v1 = vertices[i1];
-
-          // Border check
-          if (v0.border != v1.border)
-            continue;
-
-          // Compute vertex to collapse to
-          vec3f p;
-          calculate_error(i0, i1, p);
-
-          deleted0.resize(v0.tcount); // normals temporarily
-          deleted1.resize(v1.tcount); // normals temporarily
-
-          // don't remove if flipped
-          if (flipped(p, i0, i1, v0, v1, deleted0))
-            continue;
-          if (flipped(p, i1, i0, v1, v0, deleted1))
-            continue;
-
-          if ((t.attr & TEXCOORD) == TEXCOORD)
-          {
-            update_uvs(i0, v0, p, deleted0);
-            update_uvs(i0, v1, p, deleted1);
-          }
-
-          // not flipped, so remove edge
-          v0.p = p;
-          v0.q = v1.q + v0.q;
-          int tstart = refs.size();
-
-          update_triangles(i0, v0, deleted0, deleted_triangles);
-          update_triangles(i0, v1, deleted1, deleted_triangles);
-
-          int tcount = refs.size() - tstart;
-
-          if (tcount <= v0.tcount)
-          {
-            // save ram
-            if (tcount)
-              memcpy(&refs[v0.tstart], &refs[tstart], tcount * sizeof(Ref));
-          }
-          else
-            // append
-            v0.tstart = tstart;
-
-          v0.tcount = tcount;
-          break;
-        }
-      }
-      if (deleted_triangles <= 0)
-        break;
-      deleted_triangles = 0;
-    } // for each iteration
-    // clean up mesh
-    compact_mesh();
-  } // simplify_mesh_lossless()
-
   // Check if a triangle flips when this edge is removed
-
   bool flipped(vec3f p, int i0, int i1, Vertex &v0, Vertex &v1, std::vector<int> &deleted)
   {
-
     loopk(0, v0.tcount)
     {
       Triangle &t = triangles[refs[v0.tstart + k].tid];
@@ -579,7 +466,6 @@ namespace Simplify
 
       if (id1 == i1 || id2 == i1) // delete ?
       {
-
         deleted[k] = 1;
         continue;
       }
@@ -600,7 +486,6 @@ namespace Simplify
   }
 
   // update_uvs
-
   void update_uvs(int i0, const Vertex &v, const vec3f &p, std::vector<int> &deleted)
   {
     loopk(0, v.tcount)
@@ -619,7 +504,6 @@ namespace Simplify
   }
 
   // Update triangle connections and edge error after a edge is collapsed
-
   void update_triangles(int i0, Vertex &v, std::vector<int> &deleted, int &deleted_triangles)
   {
     vec3f p;
@@ -646,7 +530,6 @@ namespace Simplify
   }
 
   // compact triangles, compute edge error and build reference list
-
   void update_mesh(int iteration)
   {
     if (iteration > 0) // compact triangles
@@ -771,7 +654,6 @@ namespace Simplify
   }
 
   // Finally compact mesh before exiting
-
   void compact_mesh()
   {
     int dst = 0;
@@ -802,18 +684,15 @@ namespace Simplify
   }
 
   // Error between vertex and Quadric
-
   double vertex_error(SymetricMatrix q, double x, double y, double z)
   {
     return q[0] * x * x + 2 * q[1] * x * y + 2 * q[2] * x * z + 2 * q[3] * x + q[4] * y * y + 2 * q[5] * y * z + 2 * q[6] * y + q[7] * z * z + 2 * q[8] * z + q[9];
   }
 
   // Error for one edge
-
   double calculate_error(int id_v1, int id_v2, vec3f &p_result)
   {
     // compute interpolated vertex
-
     SymetricMatrix q = vertices[id_v1].q + vertices[id_v2].q;
     bool border = vertices[id_v1].border & vertices[id_v2].border;
     double error = 0;
@@ -845,180 +724,6 @@ namespace Simplify
     }
     return error;
   }
-
-  char *trimwhitespace(char *str)
-  {
-    char *end;
-
-    // Trim leading space
-    while (isspace((unsigned char)*str))
-      str++;
-
-    if (*str == 0) // All spaces?
-      return str;
-
-    // Trim trailing space
-    end = str + strlen(str) - 1;
-    while (end > str && isspace((unsigned char)*end))
-      end--;
-
-    // Write new null terminator
-    *(end + 1) = 0;
-
-    return str;
-  }
-
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  ///////////// Not Useful for Trimesh wrapper, we rather need to directly assign vertices, faces colors etc. ////////
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  // Option : Load OBJ
-  void load_obj(const char *filename, bool process_uv = false)
-  {
-    vertices.clear();
-    triangles.clear();
-    // printf ( "Loading Objects %s ... \n",filename);
-    FILE *fn;
-    if (filename == NULL)
-      return;
-    if ((char)filename[0] == 0)
-      return;
-    if ((fn = fopen(filename, "rb")) == NULL)
-    {
-      printf("File %s not found!\n", filename);
-      return;
-    }
-    char line[1000];
-    memset(line, 0, 1000);
-    int vertex_cnt = 0;
-    int material = -1;
-    std::map<std::string, int> material_map;
-    std::vector<vec3f> uvs;
-    std::vector<std::vector<int>> uvMap;
-
-    while (fgets(line, 1000, fn) != NULL)
-    {
-      Vertex v;
-      vec3f uv;
-
-      if (strncmp(line, "mtllib", 6) == 0) /// not important
-      {                                    /// not important
-        mtllib = trimwhitespace(&line[7]); /// not important
-      } /// not important
-      if (strncmp(line, "usemtl", 6) == 0)                   /// not important
-      {                                                      /// not important
-        std::string usemtl = trimwhitespace(&line[7]);       /// not important
-        if (material_map.find(usemtl) == material_map.end()) /// not important
-        {                                                    /// not important
-          material_map[usemtl] = materials.size();           /// not important
-          materials.push_back(usemtl);                       /// not important
-        } /// not important
-        material = material_map[usemtl]; /// not important
-      } /// not important
-
-      if (line[0] == 'v' && line[1] == 't')
-      {
-        if (line[2] == ' ')
-          if (sscanf(line, "vt %lf %lf",
-                     &uv.x, &uv.y) == 2)
-          {
-            uv.z = 0;
-            uvs.push_back(uv);
-          }
-          else if (sscanf(line, "vt %lf %lf %lf",
-                          &uv.x, &uv.y, &uv.z) == 3)
-          {
-            uvs.push_back(uv);
-          }
-      }
-      else if (line[0] == 'v')
-      {
-        if (line[1] == ' ')
-          if (sscanf(line, "v %lf %lf %lf",
-                     &v.p.x, &v.p.y, &v.p.z) == 3)
-          {
-            vertices.push_back(v);
-          }
-      }
-      int integers[9];
-      if (line[0] == 'f')
-      {
-        Triangle t;
-        bool tri_ok = false;
-        bool has_uv = false;
-
-        if (sscanf(line, "f %d %d %d",
-                   &integers[0], &integers[1], &integers[2]) == 3)
-        {
-          tri_ok = true;
-        }
-        else if (sscanf(line, "f %d// %d// %d//",
-                        &integers[0], &integers[1], &integers[2]) == 3)
-        {
-          tri_ok = true;
-        }
-        else if (sscanf(line, "f %d//%d %d//%d %d//%d",
-                        &integers[0], &integers[3],
-                        &integers[1], &integers[4],
-                        &integers[2], &integers[5]) == 6)
-        {
-          tri_ok = true;
-        }
-        else if (sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d",
-                        &integers[0], &integers[6], &integers[3],
-                        &integers[1], &integers[7], &integers[4],
-                        &integers[2], &integers[8], &integers[5]) == 9)
-        {
-          tri_ok = true;
-          has_uv = true;
-        }
-        else
-        {
-          printf("unrecognized sequence\n");
-          printf("%s\n", line);
-          while (1)
-            ;
-        }
-        if (tri_ok)
-        {
-          t.v[0] = integers[0] - 1 - vertex_cnt;
-          t.v[1] = integers[1] - 1 - vertex_cnt;
-          t.v[2] = integers[2] - 1 - vertex_cnt;
-          t.attr = 0;
-
-          if (process_uv && has_uv)
-          {
-            std::vector<int> indices;
-            indices.push_back(integers[6] - 1 - vertex_cnt);
-            indices.push_back(integers[7] - 1 - vertex_cnt);
-            indices.push_back(integers[8] - 1 - vertex_cnt);
-            uvMap.push_back(indices);
-            t.attr |= TEXCOORD;
-          }
-
-          t.material = material;
-          // geo.triangles.push_back ( tri );
-          triangles.push_back(t);
-          // state_before = state;
-          // state ='f';
-        }
-      }
-    }
-
-    if (process_uv && uvs.size())
-    {
-      loopi(0, triangles.size())
-      {
-        loopj(0, 3)
-            triangles[i]
-                .uvs[j] = uvs[uvMap[i][j]];
-      }
-    }
-
-    fclose(fn);
-
-    // printf("load_obj: vertices = %lu, triangles = %lu, uvs = %lu\n", vertices.size(), triangles.size(), uvs.size() );
-  } // load_obj()
 
   void setMeshFromExt(
       std::vector<std::vector<double>> verts,
@@ -1110,61 +815,6 @@ namespace Simplify
       normals.push_back(n);
     }
     return normals;
-  }
-
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  ///////////// Not Useful for Trimesh wrapper, we rather need to directly return vertices, faces colors etc. ////////
-  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-  void write_obj(const char *filename)
-  {
-    FILE *file = fopen(filename, "w");
-    int cur_material = -1;
-    bool has_uv = (triangles.size() && (triangles[0].attr & TEXCOORD) == TEXCOORD);
-
-    if (!file)
-    {
-      printf("write_obj: can't write data file \"%s\".\n", filename);
-      exit(0);
-    }
-    if (!mtllib.empty())
-    {
-      fprintf(file, "mtllib %s\n", mtllib.c_str());
-    }
-    loopi(0, vertices.size())
-    {
-      // fprintf(file, "v %lf %lf %lf\n", vertices[i].p.x,vertices[i].p.y,vertices[i].p.z);
-      fprintf(file, "v %g %g %g\n", vertices[i].p.x, vertices[i].p.y, vertices[i].p.z); // more compact: remove trailing zeros
-    }
-    if (has_uv)
-    {
-      loopi(0, triangles.size()) if (!triangles[i].deleted)
-      {
-        fprintf(file, "vt %g %g\n", triangles[i].uvs[0].x, triangles[i].uvs[0].y);
-        fprintf(file, "vt %g %g\n", triangles[i].uvs[1].x, triangles[i].uvs[1].y);
-        fprintf(file, "vt %g %g\n", triangles[i].uvs[2].x, triangles[i].uvs[2].y);
-      }
-    }
-    int uv = 1;
-    loopi(0, triangles.size()) if (!triangles[i].deleted)
-    {
-      if (triangles[i].material != cur_material)
-      {
-        cur_material = triangles[i].material;
-        fprintf(file, "usemtl %s\n", materials[triangles[i].material].c_str());
-      }
-      if (has_uv)
-      {
-        fprintf(file, "f %d/%d %d/%d %d/%d\n", triangles[i].v[0] + 1, uv, triangles[i].v[1] + 1, uv + 1, triangles[i].v[2] + 1, uv + 2);
-        uv += 3;
-      }
-      else
-      {
-        fprintf(file, "f %d %d %d\n", triangles[i].v[0] + 1, triangles[i].v[1] + 1, triangles[i].v[2] + 1);
-      }
-      // fprintf(file, "f %d// %d// %d//\n", triangles[i].v[0]+1, triangles[i].v[1]+1, triangles[i].v[2]+1); //more compact: remove trailing zeros
-    }
-    fclose(file);
   }
 };
 ///////////////////////////////////////////
