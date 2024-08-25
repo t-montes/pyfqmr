@@ -31,6 +31,11 @@
 #define loopj(start_l,end_l) for ( int j=start_l;j<end_l;++j )
 #define loopk(start_l,end_l) for ( int k=start_l;k<end_l;++k )
 
+struct vector2
+{
+double x, y;
+};
+
 struct vector3
 {
 double x, y, z;
@@ -38,179 +43,121 @@ double x, y, z;
 
 struct vec3f
 {
-    double x, y, z;
+  double x, y, z;
 
-    inline vec3f( void ) {}
+  inline vec3f(void) {}
 
-    //inline vec3f operator =( vector3 a )
-  // { vec3f b ; b.x = a.x; b.y = a.y; b.z = a.z; return b;}
+  inline vec3f(vector3 a)
+  {
+    x = a.x;
+    y = a.y;
+    z = a.z;
+  }
 
-    inline vec3f( vector3 a )
-   { x = a.x; y = a.y; z = a.z; }
+  inline vec3f(const double X, const double Y, const double Z)
+  {
+    x = X;
+    y = Y;
+    z = Z;
+  }
 
-    inline vec3f( const double X, const double Y, const double Z )
-    { x = X; y = Y; z = Z; }
+  inline vec3f operator+(const vec3f &a) const
+  {
+    return vec3f(x + a.x, y + a.y, z + a.z);
+  }
 
-    inline vec3f operator + ( const vec3f& a ) const
-    { return vec3f( x + a.x, y + a.y, z + a.z ); }
+  inline vec3f operator+=(const vec3f &a) const
+  {
+    return vec3f(x + a.x, y + a.y, z + a.z);
+  }
 
-  inline vec3f operator += ( const vec3f& a ) const
-    { return vec3f( x + a.x, y + a.y, z + a.z ); }
+  inline vec3f operator*(const double a) const
+  {
+    return vec3f(x * a, y * a, z * a);
+  }
 
-    inline vec3f operator * ( const double a ) const
-    { return vec3f( x * a, y * a, z * a ); }
+  inline vec3f operator*(const vec3f a) const
+  {
+    return vec3f(x * a.x, y * a.y, z * a.z);
+  }
 
-    inline vec3f operator * ( const vec3f a ) const
-    { return vec3f( x * a.x, y * a.y, z * a.z ); }
+  inline vec3f v3() const
+  {
+    return vec3f(x, y, z);
+  }
 
-    inline vec3f v3 () const
-    { return vec3f( x , y, z ); }
+  inline vec3f operator=(const vector3 a)
+  {
+    x = a.x;
+    y = a.y;
+    z = a.z;
+    return *this;
+  }
 
-    inline vec3f operator = ( const vector3 a )
-    { x=a.x;y=a.y;z=a.z;return *this; }
+  inline vec3f operator=(const vec3f a)
+  {
+    x = a.x;
+    y = a.y;
+    z = a.z;
+    return *this;
+  }
 
-    inline vec3f operator = ( const vec3f a )
-    { x=a.x;y=a.y;z=a.z;return *this; }
+  inline vec3f operator/(const vec3f a) const
+  {
+    return vec3f(x / a.x, y / a.y, z / a.z);
+  }
 
-    inline vec3f operator / ( const vec3f a ) const
-    { return vec3f( x / a.x, y / a.y, z / a.z ); }
+  inline vec3f operator-(const vec3f &a) const
+  {
+    return vec3f(x - a.x, y - a.y, z - a.z);
+  }
 
-    inline vec3f operator - ( const vec3f& a ) const
-    { return vec3f( x - a.x, y - a.y, z - a.z ); }
+  inline vec3f operator/(const double a) const
+  {
+    return vec3f(x / a, y / a, z / a);
+  }
 
-    inline vec3f operator / ( const double a ) const
-    { return vec3f( x / a, y / a, z / a ); }
+  inline double dot(const vec3f &a) const
+  {
+    return a.x * x + a.y * y + a.z * z;
+  }
 
-    inline double dot( const vec3f& a ) const
-    { return a.x*x + a.y*y + a.z*z; }
-
-    inline vec3f cross( const vec3f& a , const vec3f& b )
-    {
+  inline vec3f cross(const vec3f &a, const vec3f &b)
+  {
     x = a.y * b.z - a.z * b.y;
     y = a.z * b.x - a.x * b.z;
     z = a.x * b.y - a.y * b.x;
     return *this;
   }
 
-    inline double angle( const vec3f& v )
-    {
-    vec3f a = v , b = *this;
-    double dot = v.x*x + v.y*y + v.z*z;
-    double len = a.length() * b.length();
-    if(len==0)len=0.00001f;
-    double input = dot  / len;
-    if (input<-1) input=-1;
-    if (input>1) input=1;
-    return (double) acos ( input );
-  }
-
-    inline double angle2( const vec3f& v , const vec3f& w )
-    {
-    vec3f a = v , b= *this;
-    double dot = a.x*b.x + a.y*b.y + a.z*b.z;
-    double len = a.length() * b.length();
-    if(len==0)len=1;
-
-    vec3f plane; plane.cross( b,w );
-
-    if ( plane.x * a.x + plane.y * a.y + plane.z * a.z > 0 )
-      return (double) -acos ( dot  / len );
-
-    return (double) acos ( dot  / len );
-  }
-
-    inline vec3f rot_x( double a )
-    {
-    double yy = cos ( a ) * y + sin ( a ) * z;
-    double zz = cos ( a ) * z - sin ( a ) * y;
-    y = yy; z = zz;
-    return *this;
-  }
-    inline vec3f rot_y( double a )
-    {
-    double xx = cos ( -a ) * x + sin ( -a ) * z;
-    double zz = cos ( -a ) * z - sin ( -a ) * x;
-    x = xx; z = zz;
-    return *this;
-  }
-    inline void clamp( double min, double max )
-    {
-    if (x<min) x=min;
-    if (y<min) y=min;
-    if (z<min) z=min;
-    if (x>max) x=max;
-    if (y>max) y=max;
-    if (z>max) z=max;
-  }
-    inline vec3f rot_z( double a )
-    {
-    double yy = cos ( a ) * y + sin ( a ) * x;
-    double xx = cos ( a ) * x - sin ( a ) * y;
-    y = yy; x = xx;
-    return *this;
-  }
-    inline vec3f invert()
+  inline double length() const
   {
-    x=-x;y=-y;z=-z;return *this;
+    return (double)sqrt(x * x + y * y + z * z);
   }
-    inline vec3f frac()
+
+  inline vec3f normalize(double desired_length = 1)
   {
-    return vec3f(
-      x-double(int(x)),
-      y-double(int(y)),
-      z-double(int(z))
-      );
-  }
-
-    inline vec3f integer()
-  {
-    return vec3f(
-      double(int(x)),
-      double(int(y)),
-      double(int(z))
-      );
-  }
-
-    inline double length() const
-    {
-    return (double)sqrt(x*x + y*y + z*z);
-  }
-
-    inline vec3f normalize( double desired_length = 1 )
-    {
-    double square = sqrt(x*x + y*y + z*z);
-    /*
-    if (square <= 0.00001f )
-    {
-      x=1;y=0;z=0;
-      return *this;
-    }*/
-    //double len = desired_length / square;
-    x/=square;y/=square;z/=square;
-
-    return *this;
-  }
-    static vec3f normalize( vec3f a );
-
-  static void random_init();
-  static double random_double();
-  static vec3f random();
-
-  static int random_number;
-
-  double random_double_01(double a){
-    double rnf=a*14.434252+a*364.2343+a*4213.45352+a*2341.43255+a*254341.43535+a*223454341.3523534245+23453.423412;
-    int rni=((int)rnf)%100000;
-    return double(rni)/(100000.0f-1.0f);
-  }
-
-  vec3f random01_fxyz(){
-    x=(double)random_double_01(x);
-    y=(double)random_double_01(y);
-    z=(double)random_double_01(z);
+    double square = sqrt(x * x + y * y + z * z);
+    x /= square;
+    y /= square;
+    z /= square;
     return *this;
   }
 
+  double random_double_01(double a)
+  {
+    double rnf = a * 14.434252 + a * 364.2343 + a * 4213.45352 + a * 2341.43255 + a * 254341.43535 + a * 223454341.3523534245 + 23453.423412;
+    int rni = ((int)rnf) % 100000;
+    return double(rni) / (100000.0f - 1.0f);
+  }
+
+  vec3f random01_fxyz()
+  {
+    x = (double)random_double_01(x);
+    y = (double)random_double_01(y);
+    z = (double)random_double_01(z);
+    return *this;
+  }
 };
 
 vec3f barycentric(const vec3f &p, const vec3f &a, const vec3f &b, const vec3f &c){
@@ -315,7 +262,7 @@ namespace Simplify
     COLOR = 8
   };
   struct Triangle { int v[3];double err[4];int deleted,dirty,attr;vec3f n;vec3f uvs[3];int material; };
-  struct Vertex { vec3f p;int tstart,tcount;SymetricMatrix q;int border;};
+  struct Vertex { vec3f p;int tstart,tcount;SymetricMatrix q;int border; vector2 uv;};
   struct Ref { int tid,tvertex; };
   std::vector<Triangle> triangles;
   std::vector<Vertex> vertices;
@@ -988,7 +935,11 @@ namespace Simplify
 
 
 
-  void setMeshFromExt(std::vector< std::vector<double> > verts, std::vector< std::vector<int> > faces){
+  void setMeshFromExt(
+    std::vector< std::vector<double> > verts, 
+    std::vector< std::vector<int> > faces,
+    std::vector< std::vector<double> > uvs 
+  ){
     vertices.clear();
     triangles.clear();
 
@@ -1000,6 +951,8 @@ namespace Simplify
       v.p.x = verts[i][0];
       v.p.y = verts[i][1];
       v.p.z = verts[i][2];
+      v.uv.x = uvs[i][0];
+      v.uv.y = uvs[i][1];
       vertices.push_back(v);
     }
     loopi(0,N_faces)
@@ -1026,6 +979,19 @@ namespace Simplify
       verts.push_back(v);
     }
     return verts ;
+  }
+
+  std::vector< std::vector<double> > getUvs(){
+    std::vector< std::vector<double> > uvs;
+    int N_vertices = vertices.size();
+    loopi(0,N_vertices)
+    {
+      std::vector<double> uv;
+      uv.push_back(vertices[ i].uv.x);
+      uv.push_back(vertices[ i].uv.y);
+      uvs.push_back(uv);
+    }
+    return uvs ;
   }
 
   std::vector< std::vector<int> > getFaces(){

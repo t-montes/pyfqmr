@@ -16,6 +16,7 @@ class _hidden_ref(object):
     def __init__(self):
         self.faces = None
         self.verts = None
+        self.uvs = None
 
 _REF = _hidden_ref() 
 
@@ -23,20 +24,22 @@ cdef extern from "Simplify.h" namespace "Simplify" :
     void simplify_mesh( int target_count, int update_rate, double aggressiveness, 
                         bool verbose, int max_iterations,double alpha, int K, 
                         bool lossless, double threshold_lossless, bool preserve_border)
-    void setMeshFromExt(vector[vector[double]] vertices, vector[vector[int]] faces)
+    void setMeshFromExt(vector[vector[double]] vertices, vector[vector[int]] faces, vector[vector[double]] uvs)
     vector[vector[int]] getFaces()
     vector[vector[double]] getVertices()
     vector[vector[double]] getNormals()
+    vector[vector[double]] getUvs()
 
-cdef class Simplify : 
-
+cdef class Simplify :
     cdef int[:,:] faces_mv
     cdef double[:,:] vertices_mv
     cdef double[:,:] normals_mv
+    cdef double[:,:] uvs_mv
 
     cdef vector[vector[int]] triangles_cpp
     cdef vector[vector[double]] vertices_cpp
     cdef vector[vector[double]] normals_cpp
+    cdef vector[vector[double]] uvs_cpp
     
     def __cinit__(self):
         pass
@@ -53,17 +56,22 @@ cdef class Simplify :
             array of faces of shape (n_faces,3)
         norms : numpy.ndarray
             array of normals of shape (n_faces,3)
+        uvs : numpy.ndarray
+            array of uvs of shape (n_vertices,2)
         """
         self.triangles_cpp = getFaces()
         self.vertices_cpp = getVertices()
         self.normals_cpp = getNormals()
+        self.uvs_cpp = getUvs()
 
         cdef size_t N_t = self.triangles_cpp.size()
         cdef size_t N_v = self.vertices_cpp.size()
         cdef size_t N_n = self.normals_cpp.size()
+        cdef size_t N_uv = self.uvs_cpp.size()
         cdef np.ndarray[int, ndim=2] faces = np.zeros((N_t, 3), dtype=np.int32)
         cdef np.ndarray[double, ndim=2] verts = np.zeros((N_v, 3), dtype=np.float64)
         cdef np.ndarray[double, ndim=2] norms = np.zeros((N_n, 3), dtype=np.float64)
+        cdef np.ndarray[double, ndim=2] uvs = np.zeros((N_uv, 2), dtype=np.float64)
 
         cdef size_t i = 0
         cdef size_t j = 0
@@ -77,10 +85,13 @@ cdef class Simplify :
         for i in range(N_n):
             for j in range(3):
                 norms[i,j] = self.normals_cpp[i][j]
+        for i in range(N_uv):
+            for j in range(2):
+                uvs[i,j] = self.uvs_cpp[i][j]
 
-        return verts, faces, norms
+        return verts, faces, norms, uvs
 
-    cpdef void setMesh(self, vertices, faces, face_colors=None):
+    cpdef void setMesh(self, vertices, faces, uvs):
         """Method to set the mesh of the simplifier object.
         
         Arguments
@@ -89,23 +100,26 @@ cdef class Simplify :
             array of vertices of shape (n_vertices,3)
         faces : numpy.ndarray
             array of faces of shape (n_faces,3)
-        face_colors : numpy.ndarray
-            array of face_colors of shape (n_faces,3)
-            this is not yet implemented
+        uvs [optional] : numpy.ndarray
+            array of uvs of shape (n_vertices,2)
         """
-        _REF.faces = faces 
+        _REF.faces = faces
         _REF.verts = vertices
+        _REF.uvs = uvs
         # We have to clear the vectors to avoid overflow when using the simplify object
         # multiple times
         self.triangles_cpp.clear()
         self.vertices_cpp.clear()
         self.normals_cpp.clear()
+        self.uvs_cpp.clear()
         # Here we will need some checks, just to make sure the right objets are passed
         self.faces_mv = faces.astype(dtype="int32", subok=False, copy=False)
         self.vertices_mv = vertices.astype(dtype="float64", subok=False, copy=False)
+        self.uvs_mv = uvs.astype(dtype="float64", subok=False, copy=False)
         self.triangles_cpp = setFacesNogil(self.faces_mv, self.triangles_cpp)
         self.vertices_cpp = setVerticesNogil(self.vertices_mv, self.vertices_cpp)
-        setMeshFromExt(self.vertices_cpp, self.triangles_cpp)
+        self.uvs_cpp = setUvsNogil(self.uvs_mv, self.uvs_cpp)
+        setMeshFromExt(self.vertices_cpp, self.triangles_cpp, self.uvs_cpp)
 
     cpdef void simplify_mesh(self, int target_count = 100, int update_rate = 5, 
         double aggressiveness=7., max_iterations = 100, bool verbose=True,  
@@ -160,7 +174,7 @@ cdef class Simplify :
 @cython.nonecheck(False)
 cdef vector[vector[double]] setVerticesNogil(double[:,:] vertices, vector[vector[double]] vector_vertices )nogil:
     """nogil function for filling the vector of vertices, "vector_vertices",
-    with the data found in the memory view of the array "vertices" 
+    with the data found in the memory view of the array "vertices"
     """
     cdef vector[double] vertex 
     vector_vertices.reserve(vertices.shape[0])
@@ -193,9 +207,24 @@ cdef vector[vector[int]] setFacesNogil(int[:,:] faces, vector[vector[int]] vecto
         vector_faces.push_back(triangle)
     return vector_faces
 
+@cython.boundscheck(False)
+@cython.wraparound(False)  # turn off negative index wrapping for entire function
+@cython.nonecheck(False)
+cdef vector[vector[double]] setUvsNogil(double[:,:] uvs, vector[vector[double]] vector_uvs )nogil:
+    """nogil function for filling the vector of uvs, "vector_uvs",
+    with the data found in the memory view of the array "uvs"
+    """
+    cdef vector[double] uv 
+    vector_uvs.reserve(uvs.shape[0])
 
-
-
+    cdef size_t i = 0
+    cdef size_t j = 0
+    for i in range(uvs.shape[0]):
+        uv.clear()
+        for j in range(2):  
+            uv.push_back(uvs[i,j])
+        vector_uvs.push_back(uv)
+    return vector_uvs
 
 """Example:
 
