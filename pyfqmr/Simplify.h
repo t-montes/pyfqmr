@@ -31,14 +31,31 @@
 #define loopj(start_l, end_l) for (int j = start_l; j < end_l; ++j)
 #define loopk(start_l, end_l) for (int k = start_l; k < end_l; ++k)
 
-struct vector2
-{
-  double x, y;
-};
-
 struct vector3
 {
   double x, y, z;
+};
+
+struct vec2f {
+    double x, y;
+
+    inline vec2f(void) {}
+
+    inline vec2f(double X, double Y) : x(X), y(Y) {}
+
+    inline vec2f operator+(const vec2f &a) const {
+        return vec2f(x + a.x, y + a.y);
+    }
+
+    inline vec2f operator*(double a) const {
+        return vec2f(x * a, y * a);
+    }
+
+    inline vec2f operator=(const vec2f a) {
+        x = a.x;
+        y = a.y;
+        return *this;
+    }
 };
 
 struct vec3f
@@ -177,11 +194,13 @@ vec3f barycentric(const vec3f &p, const vec3f &a, const vec3f &b, const vec3f &c
   return vec3f(u, v, w);
 }
 
-vector2 interpolate_uv(const vector2 &uv1, const vector2 &uv2, const vector2 &uv3, const vec3f &bary) {
-    vector2 uv;
-    uv.x = bary.x * uv1.x + bary.y * uv2.x + bary.z * uv3.x;
-    uv.y = bary.x * uv1.y + bary.y * uv2.y + bary.z * uv3.y;
-    return uv;
+vec2f interpolate(const vec3f &p, const vec3f &a, const vec3f &b, const vec3f &c, const vec2f attrs[3]) {
+    vec3f bary = barycentric(p, a, b, c);
+    vec2f out = vec2f(0, 0);
+    out = out + attrs[0] * bary.x;
+    out = out + attrs[1] * bary.y;
+    out = out + attrs[2] * bary.z;
+    return out;
 }
 
 double min(double v1, double v2)
@@ -290,7 +309,7 @@ namespace Simplify
     int tstart, tcount;
     SymetricMatrix q;
     int border;
-    vector2 uv;
+    vec2f uv;
   };
   struct Ref
   {
