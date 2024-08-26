@@ -56,6 +56,10 @@ struct vec2f {
         y = a.y;
         return *this;
     }
+
+    inline vec2f operator/(double a) const {
+        return vec2f(x / a, y / a);
+    }
 };
 
 struct vec3f
@@ -323,7 +327,7 @@ namespace Simplify
 
   // Helper functions
   double vertex_error(SymetricMatrix q, double x, double y, double z);
-  double calculate_error(int id_v1, int id_v2, vec3f &p_result);
+  double calculate_error(int id_v1, int id_v2, vec3f &p_result, vec2f &uv_result);
   bool flipped(vec3f p, int i0, int i1, Vertex &v0, Vertex &v1, std::vector<int> &deleted);
   void update_triangles(int i0, Vertex &v, std::vector<int> &deleted, int &deleted_triangles);
   void update_mesh(int iteration);
@@ -409,7 +413,8 @@ namespace Simplify
 
           // Compute vertex to collapse to
           vec3f p;
-          calculate_error(i0, i1, p);
+          vec2f uv;
+          calculate_error(i0, i1, p, uv);
           deleted0.resize(v0.tcount); // normals temporarily
           deleted1.resize(v1.tcount); // normals temporarily
           // don't remove if flipped
@@ -420,6 +425,7 @@ namespace Simplify
 
           // not flipped, so remove edge
           v0.p = p;
+          v0.uv = uv;
           v0.q = v1.q + v0.q;
           int tstart = refs.size();
 
@@ -497,6 +503,7 @@ namespace Simplify
   void update_triangles(int i0, Vertex &v, std::vector<int> &deleted, int &deleted_triangles)
   {
     vec3f p;
+    vec2f uv;
     loopk(0, v.tcount)
     {
       Ref &r = refs[v.tstart + k];
@@ -511,9 +518,9 @@ namespace Simplify
       }
       t.v[r.tvertex] = i0;
       t.dirty = 1;
-      t.err[0] = calculate_error(t.v[0], t.v[1], p);
-      t.err[1] = calculate_error(t.v[1], t.v[2], p);
-      t.err[2] = calculate_error(t.v[2], t.v[0], p);
+      t.err[0] = calculate_error(t.v[0], t.v[1], p, uv);
+      t.err[1] = calculate_error(t.v[1], t.v[2], p, uv);
+      t.err[2] = calculate_error(t.v[2], t.v[0], p, uv);
       t.err[3] = min(t.err[0], min(t.err[1], t.err[2]));
       refs.push_back(r);
     }
@@ -637,7 +644,8 @@ namespace Simplify
         // Calc Edge Error
         Triangle &t = triangles[i];
         vec3f p;
-        loopj(0, 3) t.err[j] = calculate_error(t.v[j], t.v[(j + 1) % 3], p);
+        vec2f uv;
+        loopj(0, 3) t.err[j] = calculate_error(t.v[j], t.v[(j + 1) % 3], p, uv);
         t.err[3] = min(t.err[0], min(t.err[1], t.err[2]));
       }
     }
@@ -663,6 +671,7 @@ namespace Simplify
     {
       vertices[i].tstart = dst;
       vertices[dst].p = vertices[i].p;
+      vertices[dst].uv = vertices[i].uv;
       dst++;
     }
     loopi(0, triangles.size())
@@ -680,7 +689,7 @@ namespace Simplify
   }
 
   // Error for one edge
-  double calculate_error(int id_v1, int id_v2, vec3f &p_result)
+  double calculate_error(int id_v1, int id_v2, vec3f &p_result, vec2f &uv_result)
   {
     // compute interpolated vertex
     SymetricMatrix q = vertices[id_v1].q + vertices[id_v2].q;
@@ -694,6 +703,9 @@ namespace Simplify
       p_result.y = 1 / det * (q.det(0, 2, 3, 1, 5, 6, 2, 7, 8));  // vy = A42/det(q_delta)
       p_result.z = -1 / det * (q.det(0, 1, 3, 1, 4, 6, 2, 5, 8)); // vz = A43/det(q_delta)
       error = vertex_error(q, p_result.x, p_result.y, p_result.z);
+
+      // compute interpolated uv
+      uv_result = (vertices[id_v1].uv + vertices[id_v2].uv) / 2;
     }
     else
     {
@@ -701,17 +713,25 @@ namespace Simplify
       vec3f p1 = vertices[id_v1].p;
       vec3f p2 = vertices[id_v2].p;
       vec3f p3 = (p1 + p2) / 2;
+      vec2f uv1 = vertices[id_v1].uv;
+      vec2f uv2 = vertices[id_v2].uv;
+      vec2f uv3 = (uv1 + uv2) / 2;
       double error1 = vertex_error(q, p1.x, p1.y, p1.z);
       double error2 = vertex_error(q, p2.x, p2.y, p2.z);
       double error3 = vertex_error(q, p3.x, p3.y, p3.z);
       error = min(error1, min(error2, error3));
-      if (error1 == error)
+      if (error1 == error) {
         p_result = p1;
-      if (error2 == error)
+        uv_result = uv1;
+      } else if (error2 == error) {
         p_result = p2;
-      if (error3 == error)
+        uv_result = uv2;
+      } else if (error3 == error) {
         p_result = p3;
+        uv_result = uv3;
+      }
     }
+
     return error;
   }
 
